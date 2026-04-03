@@ -41,6 +41,7 @@ core/        → serviços singleton (providedIn: 'root'), guards, interceptors
 ### SSR
 
 O SSR usa o padrão `mergeApplicationConfig`:
+
 - `app.config.ts` — providers do cliente (router, animações, HTTP, hydration)
 - `app.config.server.ts` — faz merge do `appConfig` com `provideServerRendering()`
 - `main.server.ts` — exporta o bootstrap usando o config merged
@@ -52,12 +53,12 @@ Todas as rotas usam lazy loading via `loadComponent`. O wildcard `{ path: '**', 
 
 ### Path aliases (tsconfig.json)
 
-| Alias | Resolução |
-|---|---|
-| `@app/*` | `src/app/*` |
-| `@core/*` | `src/app/core/*` |
-| `@shared/*` | `src/app/shared/*` |
-| `@env/*` | `src/environments/*` |
+| Alias       | Resolução            |
+| ----------- | -------------------- |
+| `@app/*`    | `src/app/*`          |
+| `@core/*`   | `src/app/core/*`     |
+| `@shared/*` | `src/app/shared/*`   |
+| `@env/*`    | `src/environments/*` |
 
 Use sempre os aliases para imports entre camadas (ex: `@shared/components/badge/badge.component`).
 
@@ -85,8 +86,7 @@ derived = computed(() => this.label().toUpperCase());
 Templates usam o novo control flow — nunca `*ngIf` / `*ngFor`:
 
 ```html
-@for (item of items(); track item.id) { ... }
-@if (isVisible()) { ... }
+@for (item of items(); track item.id) { ... } @if (isVisible()) { ... }
 ```
 
 ## Testes
@@ -108,6 +108,77 @@ O `angular.json` substitui `environment.ts` por `environment.production.ts` no b
 ```typescript
 import { environment } from '@env/environment';
 ```
+
+## Camada Core
+
+A pasta `core/` contém toda a infraestrutura singleton da aplicação. Estrutura atual:
+
+```
+core/
+  handlers/
+    global-error.handler.ts   # ErrorHandler global (registrado em app.config.ts)
+  interceptors/
+    auth.interceptor.ts       # Adiciona Bearer token em cada requisição HTTP
+    error.interceptor.ts      # Captura e loga todos os erros HTTP
+  services/
+    token.service.ts          # Lê/grava/limpa o JWT no localStorage (SSR-safe)
+```
+
+### Adicionando um guard
+
+```typescript
+// core/guards/auth.guard.ts
+export const authGuard: CanActivateFn = () => {
+  const token = inject(TokenService).getToken();
+  return token ? true : inject(Router).createUrlTree(['/login']);
+};
+```
+
+Registre em `app.routes.ts`: `canActivate: [authGuard]`.
+
+### Adicionando um novo interceptor
+
+1. Crie `core/interceptors/meu.interceptor.ts` implementando `HttpInterceptorFn`
+2. Adicione ao array em `app.config.ts`: `withInterceptors([authInterceptor, errorInterceptor, meuInterceptor])`
+3. A ordem importa — interceptors são executados da esquerda para a direita
+
+### Autenticação
+
+Ao implementar login:
+
+1. Armazene o token via `TokenService.setToken(token)`
+2. O `authInterceptor` já injeta o header `Authorization: Bearer <token>` automaticamente
+3. No logout, chame `TokenService.clearToken()`
+
+### Observabilidade
+
+O `GlobalErrorHandler` tem um `TODO` para integração com serviços de monitoramento (Sentry, Datadog). Substitua o `console.error` pela chamada do SDK escolhido.
+
+## Segurança (servidor Express)
+
+O `server.ts` inclui por padrão:
+
+- **helmet** — headers de segurança (X-Frame-Options, HSTS, etc.). CSP está desativado por padrão pois o Angular SSR usa scripts inline para hydration; configure por projeto
+- **CORS** — controlado pela variável de ambiente `ALLOWED_ORIGINS` (lista separada por vírgula). Em produção sem a variável, bloqueia todas as origens cross-origin
+- **Rate limiting** — `/api/*` limitado a 100 requisições por IP a cada 15 minutos
+
+### Variáveis de ambiente do servidor
+
+| Variável          | Padrão | Descrição                                         |
+| ----------------- | ------ | ------------------------------------------------- |
+| `PORT`            | `4000` | Porta do servidor Express                         |
+| `NODE_ENV`        | —      | `production` ativa CORS restritivo                |
+| `ALLOWED_ORIGINS` | —      | Origens permitidas, ex: `https://app.example.com` |
+
+## Environments
+
+O `angular.json` substitui `environment.ts` por `environment.production.ts` no build de produção via `fileReplacements`. Acesse sempre via alias:
+
+```typescript
+import { environment } from '@env/environment';
+```
+
+Ao adicionar novas propriedades de configuração, declare-as primeiro na interface `EnvironmentConfig` em `src/environments/environment.model.ts` — o TypeScript garantirá que ambos os arquivos de environment sejam atualizados.
 
 ## Pre-commit
 
