@@ -14,19 +14,19 @@ npm run start:ssr                # Dev server com SSR habilitado (--configuratio
 npm run build                    # Build de produção (defaultConfiguration do builder)
 npm run serve:ssr:modelprojectangular  # Roda o bundle SSR já buildado (node dist/.../server.mjs)
 
-# Testes
-npm test                         # ng test (watch interativo no browser)
-npm run test:headless            # Headless com cobertura — único modo que dispara o gate de 100% (CI)
+# Testes (Vitest em jsdom — sem browser)
+npm test                         # ng test (Vitest em watch no terminal)
+npm run test:headless            # Vitest single-run com cobertura + gate de 100% (config `ci`)
 
 # Rodar um único spec
-npx ng test --watch=false --include='**/nome.component.spec.ts'
+npx ng test --no-watch --include='**/nome.component.spec.ts'
 
 # Lint e formatação
 npm run lint:fix                 # ESLint com auto-fix via ng lint
 npm run format:fix               # Prettier em todos os arquivos
 ```
 
-> Requisitos de runtime (`package.json` → `engines`): Node `>=18.19.0 <19 || >=20.5.0` e npm `>=10`.
+> Requisitos de runtime (`package.json` → `engines`): Node `^20.19.0 || ^22.12.0 || >=24.0.0` e npm `>=10`.
 
 ## Arquitetura
 
@@ -42,14 +42,21 @@ core/        → serviços singleton (providedIn: 'root'), guards, interceptors
 - `shared` não importa de `features` nem de `core`
 - `core` não importa de `features` nem de `shared`
 
+### Change detection
+
+A aplicação é **zoneless** (`provideZonelessChangeDetection()` em `app.config.ts`) — não há `zone.js`. Por isso todo componente é `OnPush` e o estado reativo usa **signals**. Não use APIs que dependem de zone (ex.: `setTimeout` para forçar CD); atualize signals ou use `ChangeDetectorRef.markForCheck()`.
+
 ### SSR
 
-O SSR usa o padrão `mergeApplicationConfig`:
+O SSR usa a API atual do `@angular/ssr` com `mergeApplicationConfig`:
 
 - `app.config.ts` — providers do cliente (router, animações, HTTP, hydration)
-- `app.config.server.ts` — faz merge do `appConfig` com `provideServerRendering()`
+- `app.routes.server.ts` — `serverRoutes` definindo o `RenderMode` por rota (`Server`, `Prerender` ou `Client`)
+- `app.config.server.ts` — faz merge do `appConfig` com `provideServerRendering(withRoutes(serverRoutes))`
 - `main.server.ts` — exporta o bootstrap usando o config merged
-- `server.ts` — servidor Express que serve o bundle SSR
+- `server.ts` — servidor Express que usa `AngularNodeAppEngine` (`handle` + `writeResponseToNodeResponse`) e exporta `reqHandler` via `createNodeRequestHandler`
+
+Para mudar o modo de renderização de uma rota, edite `app.routes.server.ts`. O build SSR usa a configuração `with-ssr` (`outputMode: "server"`).
 
 ### Roteamento
 
@@ -64,7 +71,7 @@ Todas as rotas usam lazy loading via `loadComponent`. O wildcard `{ path: '**', 
 | `@shared/*` | `src/app/shared/*`   |
 | `@env/*`    | `src/environments/*` |
 
-Use sempre os aliases para imports entre camadas (ex: `@shared/components/badge/badge.component`).
+Use sempre os aliases para imports entre camadas (ex: `@core/services/token.service`).
 
 ## Padrões obrigatórios para novos componentes
 
@@ -95,9 +102,9 @@ Templates usam o novo control flow — nunca `*ngIf` / `*ngFor`:
 
 ## Testes
 
-O projeto exige **100% de cobertura** (statements, branches, functions, lines) — configurado em `karma.conf.cjs` (`coverageReporter.check.global`). Todo novo componente precisa de spec completo.
+O projeto exige **100% de cobertura** (statements, branches, functions, lines) — configurado na configuração `ci` do target `test` em `angular.json` (`coverageThresholds`). Todo novo componente precisa de spec completo.
 
-> O gate de cobertura só dispara quando a cobertura é coletada (`--code-coverage`). Logo, **apenas `npm run test:headless` falha por cobertura insuficiente** — `npm test` passa mesmo com lacunas. Valide com `test:headless` antes de fazer push. Os specs rodam em ordem determinística (`jasmine.random: false`).
+> O gate de cobertura só dispara na configuração `ci` (que ativa `coverage` + `coverageThresholds`). Logo, **apenas `npm run test:headless` falha por cobertura insuficiente** — `npm test` (watch) passa mesmo com lacunas. Valide com `test:headless` antes de fazer push.
 
 Para setar inputs em specs de componentes standalone:
 
@@ -105,7 +112,13 @@ Para setar inputs em specs de componentes standalone:
 fixture.componentRef.setInput('label', 'valor');
 ```
 
-O `src/test-setup.ts` stuba o `MatIconRegistry` para evitar erros de ícones nos testes. Já é carregado automaticamente via `polyfills` no `angular.json`.
+### Testes em modo zoneless
+
+Como não há `zone.js` nos polyfills de teste (`angular.json` → `test.options.polyfills: []`), o `TestBed` roda **zoneless por padrão**. Consequências:
+
+- `fixture.detectChanges()` e `await fixture.whenStable()` continuam funcionando (CD manual).
+- **Não** use `fakeAsync`/`tick` (dependem de `zone.js`). Para timers, use os fake timers do Vitest (`vi.useFakeTimers()` / `vi.advanceTimersByTime()`).
+- Não é necessário adicionar `provideZonelessChangeDetection()` em cada `TestBed` — a ausência de `zone.js` já garante o modo zoneless.
 
 ## Environments
 
@@ -121,14 +134,18 @@ A pasta `core/` contém toda a infraestrutura singleton da aplicação. Estrutur
 
 ```
 core/
+  guards/                     # Guards de rota (vazio — adicione conforme necessário)
   handlers/
     global-error.handler.ts   # ErrorHandler global (registrado em app.config.ts)
   interceptors/
     auth.interceptor.ts       # Adiciona Bearer token em cada requisição HTTP
     error.interceptor.ts      # Captura e loga todos os erros HTTP
+  models/                     # Interfaces/DTOs de domínio (vazio)
   services/
     token.service.ts          # Lê/grava/limpa o JWT no localStorage (SSR-safe)
 ```
+
+> As pastas `core/guards`, `core/models`, `shared/components`, `shared/pipes` e `shared/directives` vêm vazias (com `.gitkeep`) — são a estrutura base; preencha conforme o projeto cresce.
 
 ### Adicionando um guard
 
@@ -170,11 +187,14 @@ O `server.ts` inclui por padrão:
 
 ### Variáveis de ambiente do servidor
 
-| Variável          | Padrão | Descrição                                         |
-| ----------------- | ------ | ------------------------------------------------- |
-| `PORT`            | `4000` | Porta do servidor Express                         |
-| `NODE_ENV`        | —      | `production` ativa CORS restritivo                |
-| `ALLOWED_ORIGINS` | —      | Origens permitidas, ex: `https://app.example.com` |
+| Variável           | Padrão | Descrição                                                                                              |
+| ------------------ | ------ | ------------------------------------------------------------------------------------------------------ |
+| `PORT`             | `4000` | Porta do servidor Express                                                                              |
+| `NODE_ENV`         | —      | `production` ativa CORS restritivo                                                                     |
+| `ALLOWED_ORIGINS`  | —      | Origens permitidas no CORS, ex: `https://app.example.com`                                              |
+| `NG_ALLOWED_HOSTS` | —      | Hosts permitidos no SSR (proteção SSRF do `@angular/ssr`). Sem isso, hosts não declarados caem em CSR. |
+
+> **SSR + `NG_ALLOWED_HOSTS`:** o `@angular/ssr` valida o header `Host` da requisição como proteção contra SSRF. Em produção, defina `NG_ALLOWED_HOSTS=seu-dominio.com` (lista separada por vírgula); caso contrário o servidor faz fallback para client-side rendering. Para testar o bundle de produção localmente: `NG_ALLOWED_HOSTS=localhost`. O `ng serve` (dev) não precisa disso.
 
 ## Environments
 

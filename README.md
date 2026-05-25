@@ -1,6 +1,6 @@
 # Projeto Modelo Angular
 
-> Base estruturada para novos projetos Angular, com SSR, Tailwind CSS, Angular Material e boas práticas de qualidade de código prontas para uso.
+> Base estruturada para novos projetos Angular, com SSR, Tailwind CSS, change detection zoneless e boas práticas de qualidade de código prontas para uso.
 
 ---
 
@@ -28,12 +28,13 @@ Este repositório é um **projeto modelo** que serve como ponto de partida para 
 **O que já vem configurado:**
 
 - Standalone components com roteamento lazy loading
-- Server-Side Rendering (SSR) com client hydration e event replay
-- Tailwind CSS com tema e design tokens customizados
-- Angular Material integrado e com animações assíncronas
-- ESLint + Prettier com regras para TypeScript e templates Angular
+- Change detection **zoneless** (sem `zone.js`) — toda a base em `OnPush` + signals
+- Server-Side Rendering (SSR) com client hydration, event replay e `RenderMode` por rota
+- Tailwind CSS com tema e design tokens customizados (classes ordenadas via Prettier)
+- Angular CDK para primitivos de acessibilidade e comportamento
+- ESLint 9 (flat config) com lint **type-aware** + Prettier
 - Husky + lint-staged para qualidade garantida no pre-commit
-- Karma + Jasmine com threshold de 100% de cobertura
+- Vitest (jsdom, sem browser) com threshold de 100% de cobertura
 - GitHub Actions com pipeline de lint, teste e build
 - Path aliases configurados (`@app`, `@core`, `@shared`, `@env`)
 - Arquivos de environment separados por configuração
@@ -42,25 +43,24 @@ Este repositório é um **projeto modelo** que serve como ponto de partida para 
 
 ## Stack
 
-| Tecnologia | Versão | Função |
-|---|---|---|
-| Angular | 21.x | Framework principal — standalone components, signals, SSR |
-| Angular Material | 21.x | Biblioteca de componentes de UI |
-| Angular CDK | 21.x | Primitivos de acessibilidade e comportamento |
-| TypeScript | 5.9.x | Tipagem estática — strict mode completo |
-| Tailwind CSS | 3.x | Utilitários de CSS com tema customizado |
-| RxJS | 7.8.x | Programação reativa |
-| Express | 4.x | Servidor HTTP para SSR |
-| Karma + Jasmine | 6.x / 5.x | Testes unitários com Chrome Headless |
-| ESLint | 8.x | Análise estática de código |
-| Prettier | 3.x | Formatação de código |
-| Husky + lint-staged | 9.x / 15.x | Hooks de Git para qualidade no pre-commit |
+| Tecnologia          | Versão            | Função                                                                  |
+| ------------------- | ----------------- | ----------------------------------------------------------------------- |
+| Angular             | 21.x              | Framework principal — standalone components, signals, SSR, **zoneless** |
+| Angular CDK         | 21.x              | Primitivos de acessibilidade e comportamento                            |
+| TypeScript          | 5.9.x             | Tipagem estática — strict mode completo                                 |
+| Tailwind CSS        | 3.x               | Utilitários de CSS com tema customizado                                 |
+| RxJS                | 7.8.x             | Programação reativa                                                     |
+| Express             | 4.x               | Servidor HTTP para SSR (`AngularNodeAppEngine`)                         |
+| Vitest              | 4.x               | Testes unitários em jsdom (sem browser)                                 |
+| ESLint              | 9.x (flat config) | Análise estática type-aware                                             |
+| Prettier            | 3.x               | Formatação de código (+ ordenação de classes Tailwind)                  |
+| Husky + lint-staged | 9.x / 15.x        | Hooks de Git para qualidade no pre-commit                               |
 
 ---
 
 ## Pré-requisitos
 
-- **Node.js** `>=18.19.0` (recomendado: `22.x` — definido em `.nvmrc`)
+- **Node.js** `^20.19.0 || ^22.12.0 || >=24.0.0` (recomendado: `22.x` — definido em `.nvmrc`)
 - **npm** `>=10`
 
 Se você usa [nvm](https://github.com/nvm-sh/nvm), basta rodar na raiz do projeto:
@@ -89,35 +89,35 @@ npm install
 
 ### Desenvolvimento
 
-| Script | Descrição |
-|---|---|
-| `npm start` | Inicia o servidor de desenvolvimento (modo SPA) |
-| `npm run start:spa` | Inicia explicitamente no modo SPA sem SSR |
-| `npm run start:ssr` | Inicia com SSR habilitado |
-| `npm run watch` | Build contínuo em modo desenvolvimento |
+| Script              | Descrição                                       |
+| ------------------- | ----------------------------------------------- |
+| `npm start`         | Inicia o servidor de desenvolvimento (modo SPA) |
+| `npm run start:spa` | Inicia explicitamente no modo SPA sem SSR       |
+| `npm run start:ssr` | Inicia com SSR habilitado                       |
+| `npm run watch`     | Build contínuo em modo desenvolvimento          |
 
 ### Build
 
-| Script | Descrição |
-|---|---|
-| `npm run build` | Build de produção completo |
-| `npm run serve:ssr:modelprojectangular` | Serve o build SSR gerado |
+| Script                                  | Descrição                  |
+| --------------------------------------- | -------------------------- |
+| `npm run build`                         | Build de produção completo |
+| `npm run serve:ssr:modelprojectangular` | Serve o build SSR gerado   |
 
 ### Testes
 
-| Script | Descrição |
-|---|---|
-| `npm test` | Executa os testes em modo watch com interface HTML |
+| Script                  | Descrição                                                           |
+| ----------------------- | ------------------------------------------------------------------- |
+| `npm test`              | Executa os testes em modo watch com interface HTML                  |
 | `npm run test:headless` | Executa os testes headless com relatório de cobertura (usado no CI) |
 
 ### Qualidade
 
-| Script | Descrição |
-|---|---|
-| `npm run lint` | Analisa o código com ESLint |
-| `npm run lint:fix` | Corrige automaticamente os problemas de lint |
-| `npm run format` | Verifica a formatação com Prettier |
-| `npm run format:fix` | Aplica a formatação com Prettier |
+| Script               | Descrição                                    |
+| -------------------- | -------------------------------------------- |
+| `npm run lint`       | Analisa o código com ESLint                  |
+| `npm run lint:fix`   | Corrige automaticamente os problemas de lint |
+| `npm run format`     | Verifica a formatação com Prettier           |
+| `npm run format:fix` | Aplica a formatação com Prettier             |
 
 ---
 
@@ -134,27 +134,31 @@ npm install
 ├── public/                     # Assets estáticos (favicon, etc.)
 ├── src/
 │   ├── app/
-│   │   ├── core/               # Serviços singleton, guards, interceptors HTTP
-│   │   ├── shared/
-│   │   │   └── components/     # Componentes, pipes e diretivas reutilizáveis
-│   │   │       ├── badge/
-│   │   │       └── tech-card/
-│   │   ├── features/           # Funcionalidades do domínio (lazy loaded)
-│   │   │   └── home/
-│   │   ├── app.component.ts    # Componente raiz com <router-outlet>
-│   │   ├── app.config.ts       # Providers do cliente (animações, HTTP, router)
-│   │   ├── app.config.server.ts# Merge do appConfig com providers de SSR
-│   │   └── app.routes.ts       # Definição de rotas com lazy loading
+│   │   ├── core/                 # Infra singleton (providedIn: 'root')
+│   │   │   ├── guards/           # Guards de rota (vazio — .gitkeep)
+│   │   │   ├── handlers/         # GlobalErrorHandler
+│   │   │   ├── interceptors/     # auth + error (HTTP)
+│   │   │   ├── models/           # Interfaces/DTOs de domínio (vazio — .gitkeep)
+│   │   │   └── services/         # TokenService (SSR-safe)
+│   │   ├── shared/               # Reutilizáveis e genéricos
+│   │   │   ├── components/       # (vazio — .gitkeep)
+│   │   │   ├── directives/       # (vazio — .gitkeep)
+│   │   │   └── pipes/            # (vazio — .gitkeep)
+│   │   ├── features/             # Domínios de negócio (lazy loaded)
+│   │   │   └── home/             # Página placeholder
+│   │   ├── app.component.ts      # Componente raiz com <router-outlet>
+│   │   ├── app.config.ts         # Providers do cliente (zoneless, router, HTTP, hydration)
+│   │   ├── app.config.server.ts  # Merge do appConfig com SSR (withRoutes)
+│   │   ├── app.routes.ts         # Rotas com lazy loading
+│   │   └── app.routes.server.ts  # RenderMode por rota (SSR)
 │   ├── environments/
-│   │   ├── environment.ts      # Variáveis de ambiente para desenvolvimento
+│   │   ├── environment.ts        # Ambiente de desenvolvimento
 │   │   └── environment.production.ts
-│   ├── main.ts                 # Bootstrap do cliente
-│   ├── main.server.ts          # Bootstrap do servidor SSR
-│   ├── server.ts               # Servidor Express para SSR
-│   ├── styles.scss             # Estilos globais + Tailwind layers
-│   └── test-setup.ts           # Setup global dos testes (stub MatIconRegistry)
+│   ├── main.ts                   # Bootstrap do cliente
+│   ├── main.server.ts            # Bootstrap do servidor SSR
+│   ├── server.ts                 # Servidor Express (AngularNodeAppEngine)
+│   └── styles.scss               # Estilos globais + Tailwind layers
 ├── angular.json
-├── karma.conf.cjs
 ├── tailwind.config.js
 ├── tsconfig.json
 └── package.json
@@ -187,29 +191,26 @@ core/interceptors/ → Interceptors HTTP
 
 Use os aliases configurados no `tsconfig.json` para evitar caminhos relativos longos:
 
-| Alias | Resolução |
-|---|---|
-| `@app/*` | `src/app/*` |
-| `@core/*` | `src/app/core/*` |
-| `@shared/*` | `src/app/shared/*` |
-| `@env/*` | `src/environments/*` |
+| Alias       | Resolução            |
+| ----------- | -------------------- |
+| `@app/*`    | `src/app/*`          |
+| `@core/*`   | `src/app/core/*`     |
+| `@shared/*` | `src/app/shared/*`   |
+| `@env/*`    | `src/environments/*` |
 
 ```typescript
 // Evite
-import { BadgeComponent } from '../../../shared/components/badge/badge.component';
+import { TokenService } from '../../../core/services/token.service';
 
 // Prefira
-import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { TokenService } from '@core/services/token.service';
 ```
 
 ### Adicionando uma nova feature
 
 ```bash
-# Crie a pasta da feature
-mkdir -p src/app/features/minha-feature
-
-# Crie o componente standalone
-ng generate component features/minha-feature/minha-feature --standalone
+# Componentes standalone são o padrão no Angular 21 (a pasta é criada pelo CLI)
+ng generate component features/minha-feature/minha-feature
 ```
 
 Registre a rota em `app.routes.ts` usando lazy loading:
@@ -255,11 +256,9 @@ export class ExemploComponent {
 
 ```html
 @for (item of items(); track item.id) {
-  <app-card [data]="item" />
-}
-
-@if (isLoading()) {
-  <app-spinner />
+<app-card [data]="item" />
+} @if (isLoading()) {
+<app-spinner />
 }
 ```
 
@@ -272,38 +271,44 @@ export class ExemploComponent {
 
 ## Testes
 
+Os testes rodam em **Vitest** (builder `@angular/build:unit-test`) sobre **jsdom** — sem browser, em segundos.
+
 ### Execução
 
 ```bash
-# Watch mode com UI no browser (desenvolvimento)
+# Watch no terminal (desenvolvimento)
 npm test
 
-# Headless com cobertura (CI / pre-push)
+# Single-run com cobertura + gate de 100% (CI)
 npm run test:headless
 ```
 
-O relatório de cobertura HTML é gerado em `coverage/modelprojectangular/index.html`.
+O relatório de cobertura HTML é gerado em `coverage/`.
 
 ### Thresholds
 
-O projeto exige **100% de cobertura** em statements, branches, functions e lines. Configurado em `karma.conf.cjs`:
+O projeto exige **100% de cobertura** em statements, branches, functions e lines. Configurado na configuração `ci` do target `test` (`angular.json`):
 
-```js
-thresholds: {
-  statements: 100,
-  branches: 100,
-  functions: 100,
-  lines: 100,
+```jsonc
+"coverageThresholds": {
+  "statements": 100,
+  "branches": 100,
+  "functions": 100,
+  "lines": 100
 }
 ```
 
 ### Padrões para specs
 
+- Importar utilitários de teste do `vitest` (`describe`, `it`, `expect`, `vi`, ...)
+- Usar `vi.fn()` / `vi.spyOn()` para mocks (e `vi.restoreAllMocks()` em `afterEach` ao espionar globais como `console`)
 - Usar `fixture.componentRef.setInput()` para definir inputs em testes
 - Descrever em português para consistência com o restante dos testes
-- Um `describe` por componente/serviço, com `beforeEach` configurando o `TestBed`
 
 ```typescript
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { beforeEach, describe, expect, it } from 'vitest';
+
 describe('MeuComponent', () => {
   let fixture: ComponentFixture<MeuComponent>;
 
@@ -328,14 +333,15 @@ describe('MeuComponent', () => {
 
 ### Lint e formatação
 
-O ESLint é configurado via `.eslintrc.cjs` com as seguintes regras principais:
+O ESLint usa **flat config** (`eslint.config.js`, ESLint 9) com o pacote unificado `angular-eslint` e lint **type-aware**:
 
-- `@angular-eslint/recommended` — boas práticas Angular
-- `@typescript-eslint/recommended` — boas práticas TypeScript
+- `typescript-eslint` `recommendedTypeChecked` + `stylistic` — regras que usam o type checker
+- `angular-eslint` `tsRecommended` + `templateRecommended` + `templateAccessibility`
 - `@angular-eslint/template/eqeqeq` — força `===` nos templates
-- `prettier` — desabilita regras de formatação que conflitam com o Prettier
+- `eslint-config-prettier` — desabilita regras de formatação que conflitam com o Prettier
+- specs (`*.spec.ts`) relaxam as regras `no-unsafe-*` para facilitar mocks/stubs
 
-O Prettier é configurado via `.prettierrc.json`:
+O Prettier é configurado via `.prettierrc.json` (com `prettier-plugin-tailwindcss` para ordenar classes):
 
 ```json
 {
@@ -343,7 +349,8 @@ O Prettier é configurado via `.prettierrc.json`:
   "singleQuote": true,
   "trailingComma": "all",
   "semi": true,
-  "endOfLine": "lf"
+  "endOfLine": "lf",
+  "plugins": ["prettier-plugin-tailwindcss"]
 }
 ```
 
@@ -351,10 +358,10 @@ O Prettier é configurado via `.prettierrc.json`:
 
 A cada `git commit`, o lint-staged executa automaticamente sobre os arquivos staged:
 
-| Arquivo | Ação |
-|---|---|
-| `*.ts`, `*.html` | `ng lint --fix` + `prettier --write` |
-| `*.scss`, `*.json`, `*.md` | `prettier --write` |
+| Arquivo                    | Ação                                 |
+| -------------------------- | ------------------------------------ |
+| `*.ts`, `*.html`           | `ng lint --fix` + `prettier --write` |
+| `*.scss`, `*.json`, `*.md` | `prettier --write`                   |
 
 ---
 
@@ -362,11 +369,11 @@ A cada `git commit`, o lint-staged executa automaticamente sobre os arquivos sta
 
 ### Paleta de cores (Tailwind)
 
-| Token | Cor base | Uso sugerido |
-|---|---|---|
-| `primary` | `#2486ff` | Ações principais, botões, links |
+| Token       | Cor base  | Uso sugerido                        |
+| ----------- | --------- | ----------------------------------- |
+| `primary`   | `#2486ff` | Ações principais, botões, links     |
 | `secondary` | `#3d5f9c` | Textos, bordas, backgrounds neutros |
-| `accent` | `#f97316` | Destaques, badges, alertas |
+| `accent`    | `#f97316` | Destaques, badges, alertas          |
 
 Cada cor possui escala completa de `50` a `950` acessível via Tailwind:
 
@@ -379,19 +386,19 @@ Cada cor possui escala completa de `50` a `950` acessível via Tailwind:
 
 Disponíveis globalmente em `styles.scss`:
 
-| Variável | Valor padrão |
-|---|---|
-| `--color-bg` | `theme('colors.secondary.50')` |
-| `--color-text` | `theme('colors.secondary.900')` |
-| `--color-primary` | `theme('colors.primary.500')` |
-| `--color-primary-hover` | `theme('colors.primary.600')` |
+| Variável                | Valor padrão                    |
+| ----------------------- | ------------------------------- |
+| `--color-bg`            | `theme('colors.secondary.50')`  |
+| `--color-text`          | `theme('colors.secondary.900')` |
+| `--color-primary`       | `theme('colors.primary.500')`   |
+| `--color-primary-hover` | `theme('colors.primary.600')`   |
 
 ### Fontes
 
-| Fonte | Uso |
-|---|---|
-| **Inter Variable** | Interface geral — corpo de texto, labels |
-| **Raleway Variable** | Títulos e destaques tipográficos |
+| Fonte                | Uso                                      |
+| -------------------- | ---------------------------------------- |
+| **Inter Variable**   | Interface geral — corpo de texto, labels |
+| **Raleway Variable** | Títulos e destaques tipográficos         |
 
 ### Utilitários CSS customizados
 
@@ -411,7 +418,7 @@ push / PR → main
         │
         ├── lint   (ESLint + Prettier check)
         │
-        ├── test   (Karma headless + upload cobertura)
+        ├── test   (Vitest + gate 100% + upload cobertura)
         │
         └── build  (ng build --configuration production)  ← só roda se lint e test passarem
 ```
