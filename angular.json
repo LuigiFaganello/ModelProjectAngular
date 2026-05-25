@@ -21,13 +21,10 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "outputPath": {
-              "base": "dist/modelprojectangular",
-              "browser": ""
-            },
+            "outputPath": "dist/modelprojectangular",
             "index": "src/index.html",
             "browser": "src/main.ts",
-            "polyfills": ["zone.js"],
+            "polyfills": [],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
@@ -75,7 +72,7 @@
             },
             "with-ssr": {
               "server": "src/main.server.ts",
-              "prerender": false,
+              "outputMode": "server",
               "ssr": {
                 "entry": "src/server.ts"
               }
@@ -102,22 +99,22 @@
           "builder": "@angular/build:extract-i18n"
         },
         "test": {
-          "builder": "@angular/build:karma",
+          "builder": "@angular/build:unit-test",
           "options": {
-            "karmaConfig": "karma.conf.cjs",
-            "polyfills": ["zone.js", "zone.js/testing", "src/test-setup.ts"],
             "tsConfig": "tsconfig.spec.json",
-            "inlineStyleLanguage": "scss",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
+            "runner": "vitest"
+          },
+          "configurations": {
+            "ci": {
+              "watch": false,
+              "coverage": true,
+              "coverageReporters": ["text-summary", "html"],
+              "coverageThresholds": {
+                "statements": 100,
+                "branches": 100,
+                "functions": 100,
+                "lines": 100
               }
-            ],
-            "styles": ["src/styles.scss"],
-            "scripts": [],
-            "stylePreprocessorOptions": {
-              "includePaths": ["node_modules"]
             }
           }
         },
