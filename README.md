@@ -105,10 +105,10 @@ npm install
 
 ### Testes
 
-| Script                  | Descrição                                                           |
-| ----------------------- | ------------------------------------------------------------------- |
-| `npm test`              | Executa os testes em modo watch com interface HTML                  |
-| `npm run test:headless` | Executa os testes headless com relatório de cobertura (usado no CI) |
+| Script                  | Descrição                                                               |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `npm test`              | Executa os testes (Vitest) em modo watch no terminal                    |
+| `npm run test:headless` | Executa os testes em single-run com cobertura + gate 100% (usado no CI) |
 
 ### Qualidade
 
