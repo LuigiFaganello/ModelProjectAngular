@@ -139,7 +139,6 @@ The following specialized agents are leveraged across all commands to provide ex
 ### Development Agents
 
 - **general-fullstack-developer** - End-to-end feature implementation spanning multiple layers
-- **general-backend-developer** - API development, database patterns, and server-side logic
 - **general-frontend-developer** - UI/UX implementation, component patterns, and browser automation
 - **general-devops** - Infrastructure automation, CI/CD, container orchestration, and reliability engineering
 
@@ -151,8 +150,8 @@ The following specialized agents are leveraged across all commands to provide ex
 
 ### Agent Usage by Command
 
-- **`/custom-init`**: general-solution-architect, general-backend-developer, general-devops, general-qa, general-code-quality-debugger, general-technical-writer (general-purpose as fallback)
+- **`/custom-init`**: general-solution-architect, general-devops, general-qa, general-code-quality-debugger, general-technical-writer (general-purpose as fallback)
 - **`/commit`**: general-code-quality-debugger, general-technical-project-lead
-- **`/issue`**: general-fullstack-developer, general-backend-developer, general-frontend-developer, general-qa, general-purpose
+- **`/issue`**: general-fullstack-developer, general-frontend-developer, general-qa, general-purpose
 - **`/reviewpr`**: general-code-quality-debugger, general-technical-project-lead, general-qa, general-solution-architect
-- **`/test`**: general-qa, general-code-quality-debugger, general-backend-developer, general-frontend-developer
+- **`/test`**: general-qa, general-code-quality-debugger, general-frontend-developer
