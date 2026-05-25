@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { GlobalErrorHandler } from './global-error.handler';
 
 describe('GlobalErrorHandler', () => {
   let handler: GlobalErrorHandler;
-  let consoleErrorSpy: jasmine.Spy;
+  let consoleErrorSpy: MockInstance;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -11,8 +12,10 @@ describe('GlobalErrorHandler', () => {
     });
 
     handler = TestBed.inject(GlobalErrorHandler);
-    consoleErrorSpy = spyOn(console, 'error');
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
+
+  afterEach(() => vi.restoreAllMocks());
 
   it('deve criar o handler', () => {
     expect(handler).toBeTruthy();

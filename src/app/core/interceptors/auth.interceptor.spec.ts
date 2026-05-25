@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { authInterceptor } from './auth.interceptor';
 import { TokenService } from '@core/services/token.service';
 
 describe('authInterceptor', () => {
   let http: HttpClient;
   let httpTesting: HttpTestingController;
-  let tokenService: TokenService;
 
   function setup(token: string | null): void {
     TestBed.configureTestingModule({
@@ -19,12 +19,11 @@ describe('authInterceptor', () => {
 
     http = TestBed.inject(HttpClient);
     httpTesting = TestBed.inject(HttpTestingController);
-    tokenService = TestBed.inject(TokenService);
-    spyOn(tokenService, 'getToken').and.returnValue(token);
+    vi.spyOn(TestBed.inject(TokenService), 'getToken').mockReturnValue(token);
   }
 
   afterEach(() => {
-    if (httpTesting) httpTesting.verify();
+    httpTesting.verify();
   });
 
   it('não deve adicionar Authorization quando não há token', () => {
@@ -32,7 +31,7 @@ describe('authInterceptor', () => {
     http.get('/api/resource').subscribe();
 
     const req = httpTesting.expectOne('/api/resource');
-    expect(req.request.headers.has('Authorization')).toBeFalse();
+    expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush({});
   });
 

@@ -9,12 +9,13 @@ import {
 } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { throwError } from 'rxjs';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { errorInterceptor } from './error.interceptor';
 
 describe('errorInterceptor', () => {
   let http: HttpClient;
   let httpTesting: HttpTestingController;
-  let consoleErrorSpy: jasmine.Spy;
+  let consoleErrorSpy: MockInstance;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -26,70 +27,68 @@ describe('errorInterceptor', () => {
 
     http = TestBed.inject(HttpClient);
     httpTesting = TestBed.inject(HttpTestingController);
-    consoleErrorSpy = spyOn(console, 'error');
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
-  afterEach(() => httpTesting.verify());
+  afterEach(() => {
+    httpTesting.verify();
+    vi.restoreAllMocks();
+  });
 
   it('deve deixar respostas bem-sucedidas passarem sem alteração', () => {
     let result: unknown;
     http.get('/api/resource').subscribe((res) => (result = res));
 
-    const req = httpTesting.expectOne('/api/resource');
-    req.flush({ data: 'ok' });
+    httpTesting.expectOne('/api/resource').flush({ data: 'ok' });
 
     expect(result).toEqual({ data: 'ok' });
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 
-  it('deve registrar erros HTTP e re-lançá-los', (done) => {
-    http.get('/api/resource').subscribe({
-      error: (err: HttpErrorResponse) => {
-        expect(err.status).toBe(500);
-        expect(consoleErrorSpy).toHaveBeenCalled();
-        done();
-      },
-    });
+  it('deve registrar erros HTTP e re-lançá-los', () => {
+    let caught: HttpErrorResponse | undefined;
+    http.get('/api/resource').subscribe({ error: (err: HttpErrorResponse) => (caught = err) });
 
-    const req = httpTesting.expectOne('/api/resource');
-    req.flush('Server Error', { status: 500, statusText: 'Internal Server Error' });
+    httpTesting
+      .expectOne('/api/resource')
+      .flush('Server Error', { status: 500, statusText: 'Internal Server Error' });
+
+    expect(caught?.status).toBe(500);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('[HTTP 500]'));
   });
 
-  it('deve registrar erros 401', (done) => {
-    http.get('/api/secure').subscribe({
-      error: (err: HttpErrorResponse) => {
-        expect(err.status).toBe(401);
-        expect(consoleErrorSpy).toHaveBeenCalledWith(jasmine.stringContaining('[HTTP 401]'));
-        done();
-      },
-    });
+  it('deve registrar erros 401', () => {
+    let caught: HttpErrorResponse | undefined;
+    http.get('/api/secure').subscribe({ error: (err: HttpErrorResponse) => (caught = err) });
 
-    const req = httpTesting.expectOne('/api/secure');
-    req.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    httpTesting
+      .expectOne('/api/secure')
+      .flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(caught?.status).toBe(401);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('[HTTP 401]'));
   });
 
-  it('deve usar a mensagem de error.error.message quando disponível', (done) => {
-    http.get('/api/resource').subscribe({
-      error: () => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(jasmine.stringContaining('Token expirado'));
-        done();
-      },
-    });
+  it('deve usar a mensagem de error.error.message quando disponível', () => {
+    http.get('/api/resource').subscribe({ error: () => undefined });
 
-    const req = httpTesting.expectOne('/api/resource');
-    req.flush({ message: 'Token expirado' }, { status: 401, statusText: 'Unauthorized' });
+    httpTesting
+      .expectOne('/api/resource')
+      .flush({ message: 'Token expirado' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Token expirado'));
   });
 
-  it('deve re-lançar erros não-HTTP sem logar', (done) => {
+  it('deve re-lançar erros não-HTTP sem logar', () => {
     const jsError = new Error('JavaScript error');
     const mockNext: HttpHandlerFn = () => throwError(() => jsError);
 
+    let caught: unknown;
     errorInterceptor(new HttpRequest('GET', '/test'), mockNext).subscribe({
-      error: (err: unknown) => {
-        expect(err).toBe(jsError);
-        expect(consoleErrorSpy).not.toHaveBeenCalled();
-        done();
-      },
+      error: (err: unknown) => (caught = err),
     });
+
+    expect(caught).toBe(jsError);
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,10 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { afterEach, describe, expect, it } from 'vitest';
 import { TokenService } from './token.service';
 
 describe('TokenService', () => {
-  function setup(platformId: string = 'browser'): TokenService {
+  function setup(platformId = 'browser'): TokenService {
     TestBed.configureTestingModule({
       providers: [TokenService, { provide: PLATFORM_ID, useValue: platformId }],
     });
