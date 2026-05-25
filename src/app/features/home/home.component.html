@@ -1,37 +1,9 @@
-<main class="flex min-h-screen flex-col items-center justify-center bg-secondary-50 px-4 py-16">
-
-  <!-- Hero -->
-  <section class="text-center">
-    <div
-      class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary-500 shadow-lg shadow-primary-200"
-    >
-      <span class="text-4xl font-bold text-white">A</span>
-    </div>
-
-    <h1 class="text-4xl font-bold tracking-tight text-secondary-900 sm:text-5xl">
-      Projeto Modelo Angular
-    </h1>
-
-    <p class="mt-4 max-w-xl text-lg text-secondary-500">
-      Base estruturada com as melhores práticas para novos projetos Angular.
-    </p>
-
-    <div class="mt-6 flex flex-wrap justify-center gap-2">
-      @for (badge of badges; track badge) {
-        <app-badge [label]="badge" />
-      }
-    </div>
-  </section>
-
-  <!-- Stack -->
-  <section class="mt-16 w-full max-w-4xl">
-    <h2 class="mb-8 text-center text-xl font-semibold text-secondary-700">Stack & Ferramentas</h2>
-
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      @for (tech of techs; track tech.title) {
-        <app-tech-card [icon]="tech.icon" [title]="tech.title" [description]="tech.description" />
-      }
-    </div>
-  </section>
-
+<main class="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+  <h1 class="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">
+    Projeto Modelo Angular
+  </h1>
+  <p class="max-w-md text-secondary-500">
+    Base estruturada e pronta para começar. Substitua esta página pela primeira feature do seu
+    projeto em <code class="rounded bg-secondary-100 px-1.5 py-0.5 text-sm">src/app/features</code>.
+  </p>
 </main>
