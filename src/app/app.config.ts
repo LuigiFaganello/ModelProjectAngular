@@ -1,5 +1,15 @@
-import { ApplicationConfig, ErrorHandler, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import {
+  ApplicationConfig,
+  ErrorHandler,
+  provideBrowserGlobalErrorListeners,
+  provideZonelessChangeDetection,
+} from '@angular/core';
+import {
+  provideRouter,
+  withComponentInputBinding,
+  withInMemoryScrolling,
+  withViewTransitions,
+} from '@angular/router';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
@@ -11,8 +21,17 @@ import { GlobalErrorHandler } from '@core/handlers/global-error.handler';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
+    // Encaminha erros globais de window ('error'/'unhandledrejection') ao ErrorHandler.
+    provideBrowserGlobalErrorListeners(),
+    // Zoneless: dispensa zone.js. Toda a app é OnPush + signals.
+    provideZonelessChangeDetection(),
+    provideRouter(
+      routes,
+      // Liga parâmetros de rota (path/query/data) diretamente a inputs do componente.
+      withComponentInputBinding(),
+      withViewTransitions(),
+      withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
+    ),
     provideClientHydration(withEventReplay()),
     provideAnimationsAsync(),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorInterceptor])),
