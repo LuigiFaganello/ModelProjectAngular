@@ -6,15 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Desenvolvimento
-npm start                        # SPA mode (sem SSR)
-npm run start:ssr                # Com SSR habilitado
+npm start                        # ng serve (config development) → SPA, sem SSR
+npm run start:spa                # Idêntico ao start, com --configuration=development explícito
+npm run start:ssr                # Dev server com SSR habilitado (--configuration=with-ssr)
 
 # Build
-npm run build                    # Build de produção
+npm run build                    # Build de produção (defaultConfiguration do builder)
+npm run serve:ssr:modelprojectangular  # Roda o bundle SSR já buildado (node dist/.../server.mjs)
 
 # Testes
-npm test                         # Watch mode com UI no browser
-npm run test:headless            # Headless com cobertura (usado no CI)
+npm test                         # ng test (watch interativo no browser)
+npm run test:headless            # Headless com cobertura — único modo que dispara o gate de 100% (CI)
 
 # Rodar um único spec
 npx ng test --watch=false --include='**/nome.component.spec.ts'
@@ -23,6 +25,8 @@ npx ng test --watch=false --include='**/nome.component.spec.ts'
 npm run lint:fix                 # ESLint com auto-fix via ng lint
 npm run format:fix               # Prettier em todos os arquivos
 ```
+
+> Requisitos de runtime (`package.json` → `engines`): Node `>=18.19.0 <19 || >=20.5.0` e npm `>=10`.
 
 ## Arquitetura
 
@@ -91,7 +95,9 @@ Templates usam o novo control flow — nunca `*ngIf` / `*ngFor`:
 
 ## Testes
 
-O projeto exige **100% de cobertura** (statements, branches, functions, lines) — configurado em `karma.conf.cjs`. Todo novo componente precisa de spec completo.
+O projeto exige **100% de cobertura** (statements, branches, functions, lines) — configurado em `karma.conf.cjs` (`coverageReporter.check.global`). Todo novo componente precisa de spec completo.
+
+> O gate de cobertura só dispara quando a cobertura é coletada (`--code-coverage`). Logo, **apenas `npm run test:headless` falha por cobertura insuficiente** — `npm test` passa mesmo com lacunas. Valide com `test:headless` antes de fazer push. Os specs rodam em ordem determinística (`jasmine.random: false`).
 
 Para setar inputs em specs de componentes standalone:
 
