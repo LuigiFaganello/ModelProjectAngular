@@ -1,0 +1,17 @@
+# Normaliza quebras de linha para LF em todos os arquivos de texto,
+# alinhado com o Prettier (`endOfLine: "lf"`). Evita ruído de CRLF↔LF
+# em Windows (onde core.autocrlf normalmente é true).
+* text=auto eol=lf
+
+# Arquivos binários — nunca normalizar.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
