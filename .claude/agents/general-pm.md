@@ -166,7 +166,7 @@ And the old image should be replaced
 - [ ] Dashboard page created with responsive design
 - [ ] Profile editing functionality implemented
 - [ ] Image upload feature working with file validation
-- [ ] Unit tests written for all components (>80% coverage)
+- [ ] Unit tests written for all components (>80% coverage — project gate)
 - [ ] Integration tests for API endpoints
 - [ ] Code reviewed and approved by senior developer
 - [ ] Accessibility audit completed (WCAG 2.1 AA compliance)

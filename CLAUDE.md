@@ -40,7 +40,7 @@ Version pinned in `.nvmrc` (`22.x`) — run `nvm use`.
 
 ## Claude Code tooling (`.claude/`)
 
-This repo carries custom Claude Code tooling (adapted from the "Claude Code Best Practices" setup, trimmed to a backend focus).
+This repo carries custom Claude Code tooling (adapted from the "Claude Code Best Practices" setup, trimmed and re-aligned to this Angular frontend stack).
 
 **Custom slash commands** (`.claude/commands/`):
 
@@ -52,7 +52,7 @@ This repo carries custom Claude Code tooling (adapted from the "Claude Code Best
 
 **Prerequisite:** `/issue` and `/reviewpr` require the GitHub CLI authenticated — `gh auth login` (verify with `gh repo view`).
 
-**Specialized agents** (`.claude/agents/`) provide domain expertise; the slash commands orchestrate them, and you can also invoke any agent directly via the Agent tool. Grouped by role (this is a backend-focused subset — no frontend/fullstack agents):
+**Specialized agents** (`.claude/agents/`) provide domain expertise; the slash commands orchestrate them, and you can also invoke any agent directly via the Agent tool. Grouped by role (a frontend-focused subset aligned to the Angular stack):
 
 _Core:_
 
@@ -62,8 +62,7 @@ _Core:_
 
 _Development:_
 
-- **general-backend-developer** — design, implement and optimize backend APIs (REST/GraphQL), database schema design, performance tuning, error-handling strategies and monitoring.
-- **general-devops** — infrastructure automation, CI/CD pipeline design, container orchestration, deployment strategies, monitoring/observability, scaling and reliability engineering.
+- **general-frontend-developer** — build and optimize the Angular UI: standalone/OnPush components, signals, the new control flow, accessibility, Core Web Vitals/bundle performance, responsive Tailwind layouts, and SSR/hydration.
 
 _Quality Assurance:_
 
@@ -74,11 +73,11 @@ _Quality Assurance:_
 **Which command uses which agent** (from the command files):
 
 - `/commit` → general-code-quality-debugger, general-technical-project-lead.
-- `/issue` → general-backend-developer, general-qa (plus the built-in general-purpose agent).
+- `/issue` → general-frontend-developer, general-qa (plus the built-in general-purpose agent).
 - `/reviewpr` → general-code-quality-debugger, general-technical-project-lead, general-qa, general-solution-architect.
-- `/test` → general-qa, general-code-quality-debugger, general-backend-developer.
+- `/test` → general-qa, general-code-quality-debugger, general-frontend-developer.
 
-`general-devops`, `general-pm` and `general-technical-writer` aren't wired into a command — invoke them directly via the Agent tool when their expertise is needed.
+`general-pm` and `general-technical-writer` aren't wired into a command — invoke them directly via the Agent tool when their expertise is needed.
 
 **Skills** (`.claude/skills/`): `conventional-commits` (auto-enforces the commit format) and `drawio` (diagram generation).
 

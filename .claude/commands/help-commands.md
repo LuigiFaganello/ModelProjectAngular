@@ -122,9 +122,7 @@ The following specialized agents are leveraged across all commands to provide ex
 
 ### Development Agents
 
-- **general-fullstack-developer** - End-to-end feature implementation spanning multiple layers
-- **general-frontend-developer** - UI/UX implementation, component patterns, and browser automation
-- **general-devops** - Infrastructure automation, CI/CD, container orchestration, and reliability engineering
+- **general-frontend-developer** - Angular UI implementation: standalone/OnPush components, signals, accessibility, performance, and SSR
 
 ### Quality Assurance Agents
 
@@ -135,6 +133,6 @@ The following specialized agents are leveraged across all commands to provide ex
 ### Agent Usage by Command
 
 - **`/commit`**: general-code-quality-debugger, general-technical-project-lead
-- **`/issue`**: general-fullstack-developer, general-frontend-developer, general-qa, general-purpose
+- **`/issue`**: general-frontend-developer, general-qa, general-purpose
 - **`/reviewpr`**: general-code-quality-debugger, general-technical-project-lead, general-qa, general-solution-architect
 - **`/test`**: general-qa, general-code-quality-debugger, general-frontend-developer
