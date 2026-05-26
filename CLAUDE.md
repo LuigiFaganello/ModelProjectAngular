@@ -1,153 +1,201 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (and any AI agent) when building **on top of this base**.
 
-## Commands
+This repository is an **Angular 21 starter/base project** — it ships no business screens, only the
+**folder structure, reusable infrastructure, and tooling** ready to go. When building a new project
+from here, follow the conventions below: they define **where each kind of file belongs**, how to name
+it, and which rules to respect.
 
-```bash
-# Desenvolvimento
-npm start                        # ng serve (config development) → SPA, sem SSR
-npm run start:spa                # Idêntico ao start, com --configuration=development explícito
-npm run start:ssr                # Dev server com SSR habilitado (--configuration=with-ssr)
+> Golden rule: **do not invent new structure**. Every artifact has a canonical home described in
+> [Where to create each file](#where-to-create-each-file). Create the feature/service/etc. there.
 
-# Build
-npm run build                    # Build de produção (defaultConfiguration do builder)
-npm run serve:ssr:modelprojectangular  # Roda o bundle SSR já buildado (node dist/.../server.mjs)
+---
 
-# Testes (Vitest em jsdom — sem browser)
-npm test                         # ng test (Vitest em watch no terminal)
-npm run test:headless            # Vitest single-run com cobertura + gate de 100% (config `ci`)
+## Scripts (package.json)
 
-# Rodar um único spec
-npx ng test --no-watch --include='**/nome.component.spec.ts'
+| Script                  | Actual command                                      | What it does / when to use                                                                                  |
+| ----------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `npm start`             | `ng serve`                                          | **SPA** dev server (no SSR) at `http://localhost:4200`. Day-to-day work.                                    |
+| `npm run start:ssr`     | `ng serve --configuration=with-ssr`                 | Dev server **with SSR** enabled. Use to validate server-side behavior during development.                   |
+| `npm run build`         | `ng build`                                          | **Production SPA** build (optimization, hashing, budgets) into `dist/`. `defaultConfiguration: production`. |
+| `npm run build:ssr`     | `ng build --configuration=production,with-ssr`      | **Production build WITH SSR** — emits the `browser/` and `server/` bundles. This is the SSR deploy build.   |
+| `npm run watch`         | `ng build --watch --configuration development`      | Incremental rebuild (does not serve). For integrations that consume `dist/` continuously.                   |
+| `npm run serve:ssr`     | `node dist/modelprojectangular/server/server.mjs`   | Runs the **already-built SSR server**. Requires `build:ssr` first. In production set `NG_ALLOWED_HOSTS`.    |
+| `npm test`              | `ng test`                                           | **Vitest** in watch mode (jsdom, no browser). For TDD/development.                                          |
+| `npm run test:headless` | `ng test --configuration=ci`                        | Vitest single-run + coverage + **100% gate**. This is what CI runs; use before pushing.                     |
+| `npm run lint`          | `ng lint`                                           | ESLint 9 (flat config, **type-aware**).                                                                     |
+| `npm run lint:fix`      | `ng lint --fix`                                     | ESLint with auto-fix.                                                                                       |
+| `npm run format`        | `prettier --check "**/*.{ts,js,json,md,scss,html}"` | Checks formatting (CI). Fails if anything is off-style.                                                     |
+| `npm run format:fix`    | `prettier --write …`                                | Applies formatting (includes Tailwind class sorting).                                                       |
+| `npm run validate`      | `lint && format && test:headless`                   | **Local quality pipeline** — mirrors CI. Run before committing/opening a PR.                                |
+| `npm run prepare`       | `husky`                                             | Installs git hooks. Runs automatically on `npm install`.                                                    |
 
-# Lint e formatação
-npm run lint:fix                 # ESLint com auto-fix via ng lint
-npm run format:fix               # Prettier em todos os arquivos
+> After changes, validate with **`npm run validate`**. To validate the SSR path, run `npm run build:ssr`.
+
+Runtime requirements (`package.json` → `engines`): Node `^20.19.0 || ^22.12.0 || >=24.0.0`, npm `>=10`.
+Version pinned in `.nvmrc` (`22.x`) — run `nvm use`.
+
+---
+
+## Folder structure
+
+```
+src/
+├── app/
+│   ├── core/                     # App-wide SINGLETON infra (loaded once). providedIn: 'root'.
+│   │   ├── guards/               #   Route guards (CanActivateFn, CanMatchFn) and resolvers.
+│   │   ├── handlers/             #   Global ErrorHandler and other app handlers.
+│   │   ├── interceptors/         #   HttpInterceptorFn (auth, error, logging, ...).
+│   │   ├── models/               #   DOMAIN interfaces/DTOs/enums used across the app.
+│   │   └── services/             #   Singleton services (providedIn: 'root'): auth, api, storage, etc.
+│   ├── layout/                   # SHELL components: header, footer, sidebar, main layout.
+│   ├── shared/                   # REUSABLE and stateless. Importable by any feature/layout.
+│   │   ├── components/           #   Presentational ("dumb") UI components: input/output only.
+│   │   ├── directives/           #   Reusable directives.
+│   │   ├── pipes/                #   Reusable pipes.
+│   │   └── utils/                #   PURE functions (formatters, validators) — no Angular dependency.
+│   ├── features/                 # Business DOMAINS. One folder per feature, lazy-loaded.
+│   │   └── home/                 #   Example feature (placeholder).
+│   ├── app.component.ts          # Root component (just <router-outlet>).
+│   ├── app.config.ts             # CLIENT providers (zoneless, router, HTTP, hydration, ErrorHandler).
+│   ├── app.config.server.ts      # Merges appConfig with SSR (provideServerRendering + withRoutes).
+│   ├── app.routes.ts             # Application routes (lazy via loadComponent/loadChildren).
+│   └── app.routes.server.ts      # Per-route RenderMode for SSR (Server | Prerender | Client).
+├── environments/
+│   ├── environment.model.ts      # EnvironmentConfig interface (source of truth — types both files).
+│   ├── environment.ts            # Development values.
+│   └── environment.production.ts # Production values (swapped via fileReplacements in the prod build).
+├── main.ts                       # Client bootstrap.
+├── main.server.ts                # Server bootstrap (receives and forwards the BootstrapContext).
+├── server.ts                     # Express server (AngularNodeAppEngine) + security middleware.
+├── index.html                    # Root HTML.
+└── styles.scss                   # Global styles + Tailwind layers + design tokens.
 ```
 
-> Requisitos de runtime (`package.json` → `engines`): Node `^20.19.0 || ^22.12.0 || >=24.0.0` e npm `>=10`.
+Empty folders contain a `.gitkeep` — they are the skeleton; fill them in as the project grows.
+**Do not use barrel files (`index.ts`)**: import directly from the file using the [path aliases](#path-aliases).
 
-## Arquitetura
+---
 
-### Camadas e regras de dependência
+## Where to create each file
+
+Use this table as a decision tree. "I want to create **X** → it goes in **Y** → named `Z`".
+
+| I need…                                              | Folder                        | File name               | Exported symbol                         |
+| ---------------------------------------------------- | ----------------------------- | ----------------------- | --------------------------------------- |
+| A business **screen/page/domain**                    | `features/<name>/`            | `<name>.component.ts`   | `class XComponent` (standalone)         |
+| A sub-component of a feature                         | `features/<name>/components/` | `<sub>.component.ts`    | `class SubComponent`                    |
+| A service used by **one feature only**               | `features/<name>/services/`   | `<name>.service.ts`     | `class XService` (route-scoped)         |
+| A **reusable** UI component (button, card, badge)    | `shared/components/`          | `<name>.component.ts`   | `class XComponent`                      |
+| A reusable **directive**                             | `shared/directives/`          | `<name>.directive.ts`   | `class XDirective`                      |
+| A reusable **pipe**                                  | `shared/pipes/`               | `<name>.pipe.ts`        | `class XPipe`                           |
+| A **pure function** / helper (no Angular)            | `shared/utils/`               | `<name>.util.ts`        | `function x()`                          |
+| A **singleton service** (auth, api, storage, logger) | `core/services/`              | `<name>.service.ts`     | `class XService` (`providedIn:'root'`)  |
+| A **route guard** / resolver                         | `core/guards/`                | `<name>.guard.ts`       | `const xGuard: CanActivateFn`           |
+| An **HTTP interceptor**                              | `core/interceptors/`          | `<name>.interceptor.ts` | `const xInterceptor: HttpInterceptorFn` |
+| An **ErrorHandler** / global handler                 | `core/handlers/`              | `<name>.handler.ts`     | `class XHandler`                        |
+| A domain **interface/DTO/enum** (global)             | `core/models/`                | `<name>.model.ts`       | `interface X` / `type X` / `enum X`     |
+| A **shell** component (header, footer, sidebar)      | `layout/`                     | `<name>.component.ts`   | `class XComponent`                      |
+| New **environment configuration**                    | `environments/`               | (edit the 3 files)      | see [Environments](#environments)       |
+
+> Types/models specific to **one** component or feature live **next to** it (in the file itself or in
+> a `models/` folder inside the feature), not in `core/models/`. `core/models/` is for global domain only.
+
+---
+
+## Layers and dependency rules
 
 ```
-features/    → páginas e domínios de negócio, lazy loaded por rota
-shared/      → componentes, pipes e diretivas genéricos e reutilizáveis
-core/        → serviços singleton (providedIn: 'root'), guards, interceptors
+core      → singleton infra (no UI). MUST NOT import from shared, layout, or features.
+shared    → reusable, stateless UI/logic. MUST NOT import from core, layout, or features.
+layout    → app shell. MAY import from core and shared. MUST NOT import from features.
+features  → business domains. MAY import from core and shared. NEVER from another feature or layout.
 ```
 
-- `features` pode importar de `shared` e `core`; features **nunca** se importam entre si
-- `shared` não importa de `features` nem de `core`
-- `core` não importa de `features` nem de `shared`
+- **Cross-feature communication** goes through a service in `core/services/` (shared state), never via a
+  direct import of one feature into another.
+- `shared/` components are **presentational (dumb)**: they receive data via `input()` and emit via
+  `output()`. They do not inject `core` services — this keeps `shared` pure and testable.
 
-### Change detection
+---
 
-A aplicação é **zoneless** (`provideZonelessChangeDetection()` em `app.config.ts`) — não há `zone.js`. Por isso todo componente é `OnPush` e o estado reativo usa **signals**. Não use APIs que dependem de zone (ex.: `setTimeout` para forçar CD); atualize signals ou use `ChangeDetectorRef.markForCheck()`.
+## Path aliases (tsconfig.json)
 
-### SSR
-
-O SSR usa a API atual do `@angular/ssr` com `mergeApplicationConfig`:
-
-- `app.config.ts` — providers do cliente (router, animações, HTTP, hydration)
-- `app.routes.server.ts` — `serverRoutes` definindo o `RenderMode` por rota (`Server`, `Prerender` ou `Client`)
-- `app.config.server.ts` — faz merge do `appConfig` com `provideServerRendering(withRoutes(serverRoutes))`
-- `main.server.ts` — exporta o bootstrap usando o config merged
-- `server.ts` — servidor Express que usa `AngularNodeAppEngine` (`handle` + `writeResponseToNodeResponse`) e exporta `reqHandler` via `createNodeRequestHandler`
-
-Para mudar o modo de renderização de uma rota, edite `app.routes.server.ts`. O build SSR usa a configuração `with-ssr` (`outputMode: "server"`).
-
-### Roteamento
-
-Todas as rotas usam lazy loading via `loadComponent`. O wildcard `{ path: '**', redirectTo: '' }` só funciona porque há uma rota `path: ''` definida antes dele. Ao adicionar features, registre sempre em `app.routes.ts` com `loadComponent`.
-
-### Path aliases (tsconfig.json)
-
-| Alias       | Resolução            |
+| Alias       | Resolves to          |
 | ----------- | -------------------- |
 | `@app/*`    | `src/app/*`          |
 | `@core/*`   | `src/app/core/*`     |
 | `@shared/*` | `src/app/shared/*`   |
 | `@env/*`    | `src/environments/*` |
 
-Use sempre os aliases para imports entre camadas (ex: `@core/services/token.service`).
+Always use aliases for cross-layer imports: `import { TokenService } from '@core/services/token.service'`.
 
-## Padrões obrigatórios para novos componentes
+---
 
-Todo componente deve ter:
+## Naming conventions
+
+- **Files**: `kebab-case` + type suffix: `user-profile.component.ts`, `auth.guard.ts`, `date.pipe.ts`.
+  Each file has its `*.spec.ts` counterpart.
+- **Classes**: `PascalCase` with suffix: `UserProfileComponent`, `TokenService`, `AuthGuard`.
+- **Functions (guards/interceptors)**: `camelCase` with suffix: `authGuard`, `errorInterceptor`.
+- **Component selectors**: `app-` + `kebab-case` (`app-user-profile`). **Directives**: `app` prefix in `camelCase`.
+- **Signals/inputs/outputs**: descriptive names without a prefix (`label`, `clicked`, `isLoading`).
+
+---
+
+## Mandatory component patterns
+
+The app is **zoneless** (`provideZonelessChangeDetection()`), with no `zone.js`. Consequences:
+
+- **Every** component is `standalone` + `ChangeDetectionStrategy.OnPush`.
+- Reactive state is **signal-based**. Do not use zone-dependent APIs to force CD
+  (e.g. `setTimeout` to "refresh the view") — update a signal or call `markForCheck()`.
 
 ```typescript
 @Component({
+  selector: 'app-example',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [...],
+  imports: [
+    /* template dependencies */
+  ],
+  templateUrl: './example.component.html',
 })
+export class ExampleComponent {
+  // Inputs/outputs via the signals API:
+  label = input.required<string>();
+  variant = input<'primary' | 'secondary'>('primary');
+  clicked = output<void>();
+  // Derived state with computed:
+  upper = computed(() => this.label().toUpperCase());
+}
 ```
 
-Inputs e outputs via API de signals:
-
-```typescript
-label = input.required<string>();
-variant = input<'primary' | 'secondary'>('primary');
-clicked = output<void>();
-derived = computed(() => this.label().toUpperCase());
-```
-
-Templates usam o novo control flow — nunca `*ngIf` / `*ngFor`:
+Templates use the **new control flow** — never `*ngIf` / `*ngFor` / `*ngSwitch`:
 
 ```html
-@for (item of items(); track item.id) { ... } @if (isVisible()) { ... }
+@for (item of items(); track item.id) { … } @if (isVisible()) { … } @else { … } @switch (status()) {
+@case ('ok') { … } @default { … } }
 ```
 
-## Testes
+---
 
-O projeto exige **100% de cobertura** (statements, branches, functions, lines) — configurado na configuração `ci` do target `test` em `angular.json` (`coverageThresholds`). Todo novo componente precisa de spec completo.
+## Recipes (how-to)
 
-> O gate de cobertura só dispara na configuração `ci` (que ativa `coverage` + `coverageThresholds`). Logo, **apenas `npm run test:headless` falha por cobertura insuficiente** — `npm test` (watch) passa mesmo com lacunas. Valide com `test:headless` antes de fazer push.
+### Add a feature
 
-Para setar inputs em specs de componentes standalone:
+1. Create `features/<name>/<name>.component.ts` (standalone, OnPush).
+2. Register the route in `app.routes.ts` with **lazy loading**:
+   ```typescript
+   { path: '<name>', title: '<Title>', loadComponent: () =>
+       import('./features/<name>/<name>.component').then((m) => m.XComponent) }
+   ```
+3. Feature with multiple routes: create `features/<name>/<name>.routes.ts` (exporting `Routes`) and use
+   `loadChildren: () => import('./features/<name>/<name>.routes').then((m) => m.routes)`.
+4. Write the `.spec.ts` (100% coverage).
 
-```typescript
-fixture.componentRef.setInput('label', 'valor');
-```
-
-### Testes em modo zoneless
-
-Como não há `zone.js` nos polyfills de teste (`angular.json` → `test.options.polyfills: []`), o `TestBed` roda **zoneless por padrão**. Consequências:
-
-- `fixture.detectChanges()` e `await fixture.whenStable()` continuam funcionando (CD manual).
-- **Não** use `fakeAsync`/`tick` (dependem de `zone.js`). Para timers, use os fake timers do Vitest (`vi.useFakeTimers()` / `vi.advanceTimersByTime()`).
-- Não é necessário adicionar `provideZonelessChangeDetection()` em cada `TestBed` — a ausência de `zone.js` já garante o modo zoneless.
-
-## Environments
-
-O `angular.json` substitui `environment.ts` por `environment.production.ts` no build de produção via `fileReplacements`. Acesse sempre via alias:
-
-```typescript
-import { environment } from '@env/environment';
-```
-
-## Camada Core
-
-A pasta `core/` contém toda a infraestrutura singleton da aplicação. Estrutura atual:
-
-```
-core/
-  guards/                     # Guards de rota (vazio — adicione conforme necessário)
-  handlers/
-    global-error.handler.ts   # ErrorHandler global (registrado em app.config.ts)
-  interceptors/
-    auth.interceptor.ts       # Adiciona Bearer token em cada requisição HTTP
-    error.interceptor.ts      # Captura e loga todos os erros HTTP
-  models/                     # Interfaces/DTOs de domínio (vazio)
-  services/
-    token.service.ts          # Lê/grava/limpa o JWT no localStorage (SSR-safe)
-```
-
-> As pastas `core/guards`, `core/models`, `shared/components`, `shared/pipes` e `shared/directives` vêm vazias (com `.gitkeep`) — são a estrutura base; preencha conforme o projeto cresce.
-
-### Adicionando um guard
+### Add a guard
 
 ```typescript
 // core/guards/auth.guard.ts
@@ -157,55 +205,120 @@ export const authGuard: CanActivateFn = () => {
 };
 ```
 
-Registre em `app.routes.ts`: `canActivate: [authGuard]`.
+Register on the route: `canActivate: [authGuard]`.
 
-### Adicionando um novo interceptor
+### Add an interceptor
 
-1. Crie `core/interceptors/meu.interceptor.ts` implementando `HttpInterceptorFn`
-2. Adicione ao array em `app.config.ts`: `withInterceptors([authInterceptor, errorInterceptor, meuInterceptor])`
-3. A ordem importa — interceptors são executados da esquerda para a direita
+1. Create `core/interceptors/<name>.interceptor.ts` implementing `HttpInterceptorFn`.
+2. Register in `app.config.ts`: `withInterceptors([authInterceptor, errorInterceptor, <new>])`.
+3. **Order matters** — interceptors run left to right.
 
-### Autenticação
+### Add a singleton service
 
-Ao implementar login:
+```typescript
+// core/services/example.service.ts
+@Injectable({ providedIn: 'root' })
+export class ExampleService {
+  /* … */
+}
+```
 
-1. Armazene o token via `TokenService.setToken(token)`
-2. O `authInterceptor` já injeta o header `Authorization: Bearer <token>` automaticamente
-3. No logout, chame `TokenService.clearToken()`
+Services with SSR-sensitive state (storage, etc.) must be **SSR-safe** — see `token.service.ts`
+(uses `isPlatformBrowser(inject(PLATFORM_ID))`).
 
-### Observabilidade
+### Authentication (already wired)
 
-O `GlobalErrorHandler` tem um `TODO` para integração com serviços de monitoramento (Sentry, Datadog). Substitua o `console.error` pela chamada do SDK escolhido.
+1. On login, store the token: `inject(TokenService).setToken(token)`.
+2. The `authInterceptor` injects `Authorization: Bearer <token>` on every request automatically.
+3. On logout: `inject(TokenService).clearToken()`.
 
-## Segurança (servidor Express)
+---
 
-O `server.ts` inclui por padrão:
+## Routing
 
-- **helmet** — headers de segurança (X-Frame-Options, HSTS, etc.). CSP está desativado por padrão pois o Angular SSR usa scripts inline para hydration; configure por projeto
-- **CORS** — controlado pela variável de ambiente `ALLOWED_ORIGINS` (lista separada por vírgula). Em produção sem a variável, bloqueia todas as origens cross-origin
-- **Rate limiting** — `/api/*` limitado a 100 requisições por IP a cada 15 minutos
+- Routes live in `app.routes.ts`. Every feature is **lazy** (`loadComponent` or `loadChildren`).
+- The `{ path: '**', redirectTo: '' }` wildcard requires a `path: ''` route declared **before** it.
+- Set a `title` on each route (it becomes the page `<title>` — good for SEO).
+- The router is already configured with `withComponentInputBinding()` (route params → `input()`),
+  `withViewTransitions()`, and scroll restoration.
 
-### Variáveis de ambiente do servidor
+---
 
-| Variável           | Padrão | Descrição                                                                                              |
-| ------------------ | ------ | ------------------------------------------------------------------------------------------------------ |
-| `PORT`             | `4000` | Porta do servidor Express                                                                              |
-| `NODE_ENV`         | —      | `production` ativa CORS restritivo                                                                     |
-| `ALLOWED_ORIGINS`  | —      | Origens permitidas no CORS, ex: `https://app.example.com`                                              |
-| `NG_ALLOWED_HOSTS` | —      | Hosts permitidos no SSR (proteção SSRF do `@angular/ssr`). Sem isso, hosts não declarados caem em CSR. |
+## SSR
 
-> **SSR + `NG_ALLOWED_HOSTS`:** o `@angular/ssr` valida o header `Host` da requisição como proteção contra SSRF. Em produção, defina `NG_ALLOWED_HOSTS=seu-dominio.com` (lista separada por vírgula); caso contrário o servidor faz fallback para client-side rendering. Para testar o bundle de produção localmente: `NG_ALLOWED_HOSTS=localhost`. O `ng serve` (dev) não precisa disso.
+Uses the current `@angular/ssr` API with `mergeApplicationConfig`:
+
+- `app.config.ts` — client providers (router, animations, HTTP, hydration).
+- `app.routes.server.ts` — `serverRoutes` with per-route `RenderMode` (`Server`, `Prerender`, or `Client`).
+- `app.config.server.ts` — merges `appConfig` with `provideServerRendering(withRoutes(serverRoutes))`.
+- `main.server.ts` — bootstrap that **receives and forwards the `BootstrapContext`** (required in Angular 21).
+- `server.ts` — Express using `AngularNodeAppEngine` (`handle` + `writeResponseToNodeResponse`),
+  exports `reqHandler` via `createNodeRequestHandler`.
+
+To change a route's render mode, edit `app.routes.server.ts`. Build: `npm run build:ssr`.
+
+---
+
+## Testing
+
+Runner: **Vitest** (builder `@angular/build:unit-test`, `vitest` runner) over **jsdom** — no browser.
+
+- **100% coverage** required (statements, branches, functions, lines), via `coverageThresholds` in the
+  `ci` configuration of the `test` target in `angular.json`. Every new file needs a `.spec.ts`.
+- The gate only fires on `npm run test:headless` (the `ci` config); `npm test` (watch) passes despite gaps.
+- Specs import from `vitest` (`import { describe, it, expect, vi } from 'vitest'`); mock with `vi.fn()`/`vi.spyOn()`.
+  When spying on globals (e.g. `console`), restore with `vi.restoreAllMocks()` in `afterEach`.
+- Inputs in specs: `fixture.componentRef.setInput('label', 'value')`.
+
+### Zoneless mode in tests
+
+With no `zone.js` in the test polyfills (`angular.json` → `test.options.polyfills: []`), `TestBed` runs **zoneless by default**:
+
+- `fixture.detectChanges()` and `await fixture.whenStable()` work (manual CD).
+- **Do not** use `fakeAsync`/`tick` (they depend on `zone.js`). For timers, use `vi.useFakeTimers()` / `vi.advanceTimersByTime()`.
+
+---
 
 ## Environments
 
-O `angular.json` substitui `environment.ts` por `environment.production.ts` no build de produção via `fileReplacements`. Acesse sempre via alias:
+`angular.json` swaps `environment.ts` for `environment.production.ts` in the production build
+(`fileReplacements`). Always access via the alias:
 
 ```typescript
 import { environment } from '@env/environment';
 ```
 
-Ao adicionar novas propriedades de configuração, declare-as primeiro na interface `EnvironmentConfig` em `src/environments/environment.model.ts` — o TypeScript garantirá que ambos os arquivos de environment sejam atualizados.
+When adding a config property, **declare it first** in the `EnvironmentConfig` interface
+(`environment.model.ts`) — TypeScript then forces you to update both `environment.ts` and `environment.production.ts`.
 
-## Pre-commit
+---
 
-O Husky executa `lint-staged` a cada commit. O `prepare` script (`"husky"`) instala os hooks automaticamente no `npm install`. Se os hooks não estiverem ativos após clonar, rode `npm install` novamente.
+## Security (Express server)
+
+`server.ts` includes by default:
+
+- **helmet** — security headers. CSP is disabled by default (SSR uses inline hydration scripts); configure per project.
+- **CORS** — via `ALLOWED_ORIGINS`. In production without the variable, cross-origin is blocked.
+- **Rate limiting** — `/api/*` limited to 100 req/IP per 15 minutes.
+
+### Server environment variables
+
+| Variable           | Default | Description                                                                                        |
+| ------------------ | ------- | -------------------------------------------------------------------------------------------------- |
+| `PORT`             | `4000`  | Express server port.                                                                               |
+| `NODE_ENV`         | —       | `production` enables restrictive CORS.                                                             |
+| `ALLOWED_ORIGINS`  | —       | Allowed CORS origins, e.g. `https://app.example.com` (comma-separated list).                       |
+| `NG_ALLOWED_HOSTS` | —       | Allowed SSR hosts (`@angular/ssr` SSRF protection). Without it, undeclared hosts fall back to CSR. |
+
+> **SSR + `NG_ALLOWED_HOSTS`**: `@angular/ssr` validates the request `Host` header (anti-SSRF). In production set
+> `NG_ALLOWED_HOSTS=your-domain.com`; otherwise the server falls back to client-side rendering. To test the
+> production bundle locally: `NG_ALLOWED_HOSTS=localhost`. `ng serve` (dev) does not need this.
+
+---
+
+## Quality & pre-commit
+
+- **Husky + lint-staged** run on every commit: ESLint (`*.{ts,html}`) + Prettier (`*.{ts,html,js,scss,json,md}`).
+- `prepare` installs the hooks on `npm install`. If they don't fire after cloning, run `npm install` again.
+- Line endings are **LF** (enforced by `.gitattributes`, aligned with Prettier `endOfLine: lf`).
+- Before pushing: **`npm run validate`**.

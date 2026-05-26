@@ -89,19 +89,19 @@ npm install
 
 ### Desenvolvimento
 
-| Script              | Descrição                                       |
-| ------------------- | ----------------------------------------------- |
-| `npm start`         | Inicia o servidor de desenvolvimento (modo SPA) |
-| `npm run start:spa` | Inicia explicitamente no modo SPA sem SSR       |
-| `npm run start:ssr` | Inicia com SSR habilitado                       |
-| `npm run watch`     | Build contínuo em modo desenvolvimento          |
+| Script              | Descrição                                          |
+| ------------------- | -------------------------------------------------- |
+| `npm start`         | Dev server em modo SPA (sem SSR), `localhost:4200` |
+| `npm run start:ssr` | Dev server com SSR habilitado                      |
+| `npm run watch`     | Rebuild incremental em modo desenvolvimento        |
 
 ### Build
 
-| Script                                  | Descrição                  |
-| --------------------------------------- | -------------------------- |
-| `npm run build`                         | Build de produção completo |
-| `npm run serve:ssr:modelprojectangular` | Serve o build SSR gerado   |
+| Script              | Descrição                                                |
+| ------------------- | -------------------------------------------------------- |
+| `npm run build`     | Build de produção SPA                                    |
+| `npm run build:ssr` | Build de produção **com SSR** (bundles browser + server) |
+| `npm run serve:ssr` | Roda o servidor SSR já buildado (requer `build:ssr`)     |
 
 ### Testes
 
@@ -112,12 +112,13 @@ npm install
 
 ### Qualidade
 
-| Script               | Descrição                                    |
-| -------------------- | -------------------------------------------- |
-| `npm run lint`       | Analisa o código com ESLint                  |
-| `npm run lint:fix`   | Corrige automaticamente os problemas de lint |
-| `npm run format`     | Verifica a formatação com Prettier           |
-| `npm run format:fix` | Aplica a formatação com Prettier             |
+| Script               | Descrição                                                      |
+| -------------------- | -------------------------------------------------------------- |
+| `npm run lint`       | Analisa o código com ESLint                                    |
+| `npm run lint:fix`   | Corrige automaticamente os problemas de lint                   |
+| `npm run format`     | Verifica a formatação com Prettier                             |
+| `npm run format:fix` | Aplica a formatação com Prettier                               |
+| `npm run validate`   | Pipeline de qualidade local: lint + format + testes (CI local) |
 
 ---
 
@@ -135,15 +136,17 @@ npm install
 ├── src/
 │   ├── app/
 │   │   ├── core/                 # Infra singleton (providedIn: 'root')
-│   │   │   ├── guards/           # Guards de rota (vazio — .gitkeep)
+│   │   │   ├── guards/           # Guards/resolvers de rota (vazio — .gitkeep)
 │   │   │   ├── handlers/         # GlobalErrorHandler
 │   │   │   ├── interceptors/     # auth + error (HTTP)
 │   │   │   ├── models/           # Interfaces/DTOs de domínio (vazio — .gitkeep)
 │   │   │   └── services/         # TokenService (SSR-safe)
-│   │   ├── shared/               # Reutilizáveis e genéricos
-│   │   │   ├── components/       # (vazio — .gitkeep)
+│   │   ├── layout/               # Componentes de shell: header/footer/sidebar (vazio — .gitkeep)
+│   │   ├── shared/               # Reutilizáveis, stateless e genéricos
+│   │   │   ├── components/       # Componentes de UI apresentacionais (vazio — .gitkeep)
 │   │   │   ├── directives/       # (vazio — .gitkeep)
-│   │   │   └── pipes/            # (vazio — .gitkeep)
+│   │   │   ├── pipes/            # (vazio — .gitkeep)
+│   │   │   └── utils/            # Funções puras/helpers (vazio — .gitkeep)
 │   │   ├── features/             # Domínios de negócio (lazy loaded)
 │   │   │   └── home/             # Página placeholder
 │   │   ├── app.component.ts      # Componente raiz com <router-outlet>
@@ -172,18 +175,26 @@ npm install
 
 ```
 features/          → Páginas e domínios de negócio (lazy loaded por rota)
-shared/components/ → Componentes de UI genéricos e reutilizáveis
-shared/pipes/      → Pipes reutilizáveis (a criar conforme necessidade)
-shared/directives/ → Diretivas reutilizáveis (a criar conforme necessidade)
+layout/            → Componentes de shell: header, footer, sidebar
+shared/components/ → Componentes de UI genéricos e reutilizáveis (apresentacionais)
+shared/directives/ → Diretivas reutilizáveis
+shared/pipes/      → Pipes reutilizáveis
+shared/utils/      → Funções puras/helpers (sem dependência de Angular)
 core/services/     → Serviços singleton injetados na raiz
-core/guards/       → Guards de rota
+core/guards/       → Guards/resolvers de rota
 core/interceptors/ → Interceptors HTTP
+core/handlers/     → ErrorHandler global e afins
+core/models/       → Interfaces/DTOs de domínio (globais)
 ```
+
+> A documentação completa de **o que vai em cada pasta** e o guia "onde criar cada arquivo"
+> estão no [`CLAUDE.md`](./CLAUDE.md), que é a referência para desenvolvimento assistido por IA.
 
 ### Regras de dependência
 
-- `features` pode importar de `shared` e `core`, **nunca** entre features diretamente
-- `shared` **não pode** importar de `features` nem de `core`
+- `features` pode importar de `shared` e `core`; **nunca** de outra feature nem de `layout`
+- `layout` pode importar de `shared` e `core`; **nunca** de `features`
+- `shared` **não pode** importar de `features`, `layout` nem de `core`
 - `core` **não pode** importar de `features` nem de `shared`
 - Comunicação entre features deve ser feita via serviço em `core`
 
